@@ -14,7 +14,7 @@ with open('router_ips.csv', mode='r') as file:
     csvFile = csv.DictReader(file)
     ip_address_sources = [row['ip_address'] for row in csvFile]
 
-community = 'Balifiber'
+community = 'public'
 
 # Retrieve current time
 retrieved_at_date = datetime.datetime.now().strftime("%Y-%m-%d")
