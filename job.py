@@ -5,7 +5,7 @@ import subprocess
 
 def run_app():
     # Code for the function you want to schedule
-    subprocess.call(["python3", "get_snmp.py"])
+    subprocess.call(["python3", "getmikrotik.py"])
     print("Running the job...")
 
 s = sched.scheduler(time.time, time.sleep)
