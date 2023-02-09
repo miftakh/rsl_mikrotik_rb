@@ -1,3 +1,8 @@
+# Author: Miftakhurrokhman
+# Date: January 26, 2023
+# Version: 1
+# Purpose: This script is used to retrieve SNMP data from DCN devices
+
 from pysnmp.hlapi import *
 import pysnmp
 from datetime import timedelta
@@ -9,6 +14,9 @@ from mysql.connector import  Error
 import csv
 from sqlalchemy import create_engine
 from tqdm import tqdm
+import time
+
+start_time = time.time()
 
 with open('router_ips.csv', mode='r') as file:
     csvFile = csv.DictReader(file)
@@ -65,84 +73,66 @@ def get_snmp_value(ip_address, community, oid):
                             errorIndex and varBinds[int(errorIndex) - 1][0] or '?')
     else:
         return varBinds[0][1].prettyPrint()
-    
+
+def get_data(ip_address, community):
+    uptime = get_snmp_value(ip_address, community, uptime_oid)
+    uptime_read = convert_uptime(uptime)
+    hostname = get_snmp_value(ip_address, community, hostname_oid)
+    ip_address = get_snmp_value(ip_address, community, ip_address_oid + '.' + ip_address)
+    hardware = get_snmp_value(ip_address, community, hardware_oid)
+    serial_number = get_snmp_value(ip_address, community, serial_number_oid)
+    temperature = get_snmp_value(ip_address, community, temperature_oid)
+    sfp_tx_power = get_snmp_value(ip_address, community, sfp_tx_power_oid)
+    sfp_rx_power = get_snmp_value(ip_address, community, sfp_rx_power_oid)
+
+    data = {
+        'retrieved_at_date': retrieved_at_date,
+        'retrieved_at_time': retrieved_at_time,
+        'uptime': uptime_read, 
+        'hostname': [hostname],
+        'ip_address': [ip_address], 
+        'hardware': [hardware],
+        'serial_number': [serial_number],
+        'temperature': [temperature],
+        'sfp_tx_power': [sfp_tx_power], 
+        'sfp_rx_power': [sfp_rx_power]
+    }
+
+    return data
+
+def import_to_mysql(df):
+    try:
+        engine = create_engine('mysql+mysqlconnector://<username>:<password>@<host>:3306/<db>')
+        df.to_sql(name='rsl_mikrotik', con=engine, if_exists='append', index=False)
+        print("Data successfully imported to MySQL")
+    except Exception as e:
+        print("Error occurred while importing data to MySQL:", str(e))
+
 df_list = []
 failed_ips = []
-for ip_address_source in tqdm(ip_address_sources,desc='Retrieving SNMP data'):
+for ip_address_source in tqdm(ip_address_sources, desc='Retrieving SNMP data'):
     if ip_address_source in failed_ips:
         continue
     try:
-        uptime = get_snmp_value(ip_address_source, community, uptime_oid)
-        uptime_read = convert_uptime(uptime)
-        hostname = get_snmp_value(ip_address_source, community, hostname_oid)
-        if hostname == "RequestTimedOut('No SNMP response received before timeout')":
-            hostname = None
-        ip_address = get_snmp_value(ip_address_source, community, ip_address_oid + '.' + ip_address_source)
-        hardware = get_snmp_value(ip_address_source, community, hardware_oid)
-        serial_number = get_snmp_value(ip_address_source, community, serial_number_oid)
-        if serial_number == "RequestTimedOut('No SNMP response received before timeout')":
-            serial_number = None
-        temperature = get_snmp_value(ip_address_source, community, temperature_oid)
-        if temperature == "RequestTimedOut('No SNMP response received before timeout')":
-            temperature = None
-        else:
-            temperature = float(temperature)
-            temperature = temperature / 10
-        sfp_tx_power = get_snmp_value(ip_address_source, community, sfp_tx_power_oid)
-        if sfp_tx_power == "RequestTimedOut('No SNMP response received before timeout')":
-            sfp_tx_power = None
-        else:
-            sfp_tx_power = float(sfp_tx_power)
-            sfp_tx_power = sfp_tx_power / 1000
-        sfp_rx_power = get_snmp_value(ip_address_source, community, sfp_rx_power_oid)
-        if sfp_rx_power == "RequestTimedOut('No SNMP response received before timeout')":
-            sfp_rx_power = None
-        else:
-            sfp_rx_power = float(sfp_rx_power)
-            sfp_rx_power = sfp_rx_power / 1000
-
-        data = {
-                'retrieved_at_date': retrieved_at_date,
-                'retrieved_at_time': retrieved_at_time,
-                'uptime':uptime_read, 
-                'hostname': [hostname],
-                'ip_address': [ip_address], 
-                'hardware': [hardware],
-                'serial_number': [serial_number],
-                'temperature': [temperature],
-                'sfp_tx_power': [sfp_tx_power], 
-                'sfp_rx_power': [sfp_rx_power],
-                }
-
-        df = DataFrame(data)
+        snmp_data = get_data(ip_address_source,community)
+        df = pd.DataFrame(snmp_data)
         df_list.append(df)
-        # result_df = pd.concat(df_list)
-
     except Exception as e:
         failed_ips.append(ip_address_source)
-        print(f'Error retrieving data from {ip_address_source}: {e}')
-result_df = pd.concat(df_list)
-print(result_df)
+        print(f"Failed to retrieve SNMP data for {ip_address_source}: {e}")
 
 
-with tqdm(total=100, desc="Connecting to MySQL") as pbar:
-    try:
-        engine = create_engine('mysql+mysqlconnector://<username>:<password>@<host>:3306/<db>')
-        connection = engine.connect()
-        pbar.update(100)
-        # print("Connection to MySQL database established.")
-    except Error as e:
-        print(f"Error connecting to MySQL database: {e}")
-        exit()
+df = pd.concat(df_list, ignore_index=True)
+if len(df_list) > 0:
+    df = pd.concat(df_list, ignore_index=True)
+    print(df)
+else:
+    print("No dataframes to concatenate")
 
-for df in tqdm(df_list,desc='Running append to database'):
-    check = df != 'RequestTimedOut'
-    if check.all().all():
-        try:
-            df.to_sql(name='table_name', con=engine, if_exists='append', index=False)
-        except Exception as e:
-            print(f'Error appending data to MySQL table: {e}')
-            continue
-    else:
-        check =0
-        # print(f'Data not appended to MySQL table, IP address: {df.iloc[0]["ip_address"]} returned RequestTimedOut')
+df.to_csv('mikrotik.csv', index=False)
+# import_to_mysql(df)
+
+elapsed_time = time.time() - start_time
+
+minutes, seconds = divmod(elapsed_time, 60)
+print(f"Time elapsed: {int(minutes)} minutes and {int(seconds)} seconds")
