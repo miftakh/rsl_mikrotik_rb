@@ -1,8 +1,3 @@
-# Author: Miftakhurrokhman
-# Date: January 26, 2023
-# Version: 1
-# Purpose: This script is used to retrieve SNMP data from DCN devices
-
 from pysnmp.hlapi import *
 import pysnmp
 from datetime import timedelta
