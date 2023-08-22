@@ -1,47 +1,41 @@
 SNMP Data Retrieval and Storage Script
-This script is designed to retrieve SNMP (Simple Network Management Protocol) data from a list of router IP addresses, extract specific information, and store the gathered data in a CSV file. Additionally, there is an option to import the data into a MySQL database.
+This repository contains a Python script designed to streamline the retrieval of SNMP (Simple Network Management Protocol) data from a list of router IP addresses. The script utilizes the pysnmp library to establish SNMP communication with the routers, extract specific information, and store the acquired data in a CSV file. Additionally, there is an optional feature to import the gathered data into a MySQL database for further analysis.
 
+Features and Usage
+Efficient Data Gathering:
+
+The script reads router IP addresses from a router_ips.csv file, allowing you to easily manage and update the list.
+SNMP data retrieval is orchestrated using the pysnmp library, ensuring efficient communication with the routers.
+Customizable Configuration:
+
+Modify the SNMP community string in the script to match your network configuration.
+Customize SNMP OIDs (Object Identifiers) to target specific data points on the routers.
+Data Extraction and Transformation:
+
+The script extracts various information from the routers, including uptime, hostname, IP address, hardware details, serial number, temperature, and SFP module power levels.
+Uptime values are converted into human-readable format for easy interpretation.
+Output Generation:
+
+Retrieved data is compiled into a Pandas DataFrame for organized storage and analysis.
+If successful, the script generates a CSV file named mikrotik.csv containing the gathered data.
+MySQL Database Integration (Optional):
+
+Uncomment the relevant line in the script to enable data import into a MySQL database.
+Provides the option to establish a connection to a MySQL database, allowing for long-term data storage and more advanced analysis.
+Error Handling:
+
+The script handles cases where SNMP data retrieval fails for specific IP addresses and maintains a record of failed attempts.
 Prerequisites
-Before using this script, make sure you have the following:
+Python 3.6 or later installed.
+Required Python packages installed (pysnmp, pandas, mysql-connector-python, sqlalchemy, tqdm).
+Usage Instructions
+Prepare a router_ips.csv file with a column named ip_address containing the IP addresses of the routers to be queried.
 
-Python installed on your system (version 3.6 or later).
-Required Python packages installed. You can install them using the following command:
-pip install pysnmp pandas mysql-connector-python sqlalchemy tqdm
+Configure the script by modifying the SNMP community string and, if necessary, the MySQL database connection details.
 
-Usage
-Data Preparation:
+Run the script using the command: python script_name.py (replace script_name.py with the actual script filename).
 
-Prepare a CSV file named router_ips.csv containing a column named ip_address listing the IP addresses of the routers you want to query using SNMP.
-Configuration:
-
-Modify the community variable to match the SNMP community string used by the routers. Replace 'public' with your actual SNMP community string if it's different.
-
-Modify the MySQL database connection details in the import_to_mysql function. Replace <username>, <password>, <host>, <db> with your MySQL database credentials and details.
-
-Running the Script:
-
-Open a terminal or command prompt.
-
-Navigate to the directory containing the script and the router_ips.csv file.
-
-Run the script using the following command:
-python script_name.py
-Output:
-
-The script will retrieve SNMP data from the routers listed in the router_ips.csv file. If successful, it will generate a CSV file named mikrotik.csv containing the gathered data.
-
-Optionally, if you uncomment the import_to_mysql(df) line, the script will attempt to import the data into the specified MySQL database.
-
-The script will also print the time elapsed during the data retrieval and processing.
-
-Notes
-The script uses the pysnmp library to perform SNMP queries to retrieve data from routers.
-
-SNMP OIDs (Object Identifiers) are used to query specific information from routers. You can modify the OIDs to gather different types of data based on your requirements.
-
-The script provides error handling for cases where SNMP data retrieval fails for specific IP addresses. Failed IP addresses will be recorded in the failed_ips list.
-
-Be cautious when using the import_to_mysql function to store data in a MySQL database. Make sure to secure your database credentials and validate the data being imported.
+Check the generated mikrotik.csv file for the retrieved data and optionally verify the MySQL database for imported data.
 
 Disclaimer
-This script is provided as-is and without any warranties. Use it at your own risk. Always ensure you have proper authorization to access the SNMP devices and follow best practices for data handling and security.
+This script is provided for educational and informational purposes only. Users are responsible for ensuring proper authorization to access SNMP devices and adhering to network security best practices. The script is offered without warranties, and users should exercise caution when handling sensitive information.
